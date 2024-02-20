@@ -13,6 +13,7 @@ func handlerFunc(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "请联系"+
 			"<a href=\"mailto:test@test.com\">runningape</a>")
 	} else {
+		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "请联系我们")
 	}
 }
