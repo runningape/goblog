@@ -8,18 +8,15 @@ import (
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, "<h1>Hello, 这里是goblog!</h1>")
 }
 
 func aboutHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprintf(w, "请联系"+
 		"<a href=\"mailto:test@test.com\">runningape</a>")
 }
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(w, "<h1>请求页面未找到 :(</h1><p>Please contact me</p>")
 }
@@ -36,6 +33,13 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "创建文章页面")
+}
+
+func forceHTMLMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
@@ -58,6 +62,8 @@ func main() {
 
 	articlesURL, _ := router.Get("articles.show").URL("id", "23")
 	fmt.Println("articlesURL: ", articlesURL)
+
+	router.Use(forceHTMLMiddleware)
 
 	http.ListenAndServe(":3000", router)
 }
