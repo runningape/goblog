@@ -18,7 +18,7 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprint(w, "<h1>请求的页面未找到 :(</h1><p>Please sendto me</p>")
+	fmt.Fprint(w, "<h1>请求的页面未找到 :(</h1><p>Please  sendto me</p>")
 }
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
