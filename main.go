@@ -35,7 +35,10 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "创建文章页面")
+	fmt.Fprintf(w, "PostForm's title:%v <br>", r.PostFormValue("title"))
+	fmt.Fprintf(w, "Form's title:%v <br>", r.FormValue("title"))
+	fmt.Fprintf(w, "PostForm's test:%v <br>", r.PostFormValue("test"))
+	fmt.Fprintf(w, "Form's test:%v <br>", r.FormValue("test"))
 }
 
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
@@ -45,7 +48,7 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 				<title>创建文章 -- 我的技术博客</title>
 			</head>
 			<body>
-				<form action="%s" method="post">
+				<form action="%s?test=data" method="post">
 					<p><input type="text" name="title"></p>
 					<p><textarea name="body" cols="30" rows="10"></textarea></p>
 					<p><button type="submit">提交</button></p>
