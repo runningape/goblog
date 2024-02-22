@@ -3,12 +3,21 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
+	"text/template"
+	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 )
 
 var router = mux.NewRouter()
+
+type ArticlesFormData struct {
+	Title, Body string
+	URL         *url.URL
+	Errors      map[string]string
+}
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h1>welcome to goblog</h1>")
@@ -34,10 +43,74 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Post's title: %v <br>", r.PostFormValue("title"))
-	fmt.Fprintf(w, "Form's title: %v <br>", r.FormValue("title"))
-	fmt.Fprintf(w, "Post's test: %v <br>", r.PostFormValue("test"))
-	fmt.Fprintf(w, "Form's test: %v <br>", r.FormValue("test"))
+	title := r.PostFormValue("title")
+	body := r.PostFormValue("body")
+
+	errors := make(map[string]string)
+
+	if title == "" {
+		errors["title"] = "Title cannot be empty!"
+	} else if utf8.RuneCountInString(title) < 3 ||
+		utf8.RuneCountInString(title) > 40 {
+		errors["title"] = "The length of the title must be between 3 and 40 characters"
+	}
+
+	if body == "" {
+		errors["body"] = "Content cannot be empty!"
+	} else if utf8.RuneCountInString(body) < 10 {
+		errors["body"] = "Content cannot be less than 40 characters."
+	}
+
+	if len(errors) == 0 {
+		fmt.Fprint(w, "Validation successful!")
+		fmt.Fprintf(w, "title's value: %v <br>", title)
+		fmt.Fprintf(w, "title's len: %v <br>", utf8.RuneCountInString(title))
+		fmt.Fprintf(w, "content's value: %v <br>", body)
+		fmt.Fprintf(w, "content's len: %v <br>", utf8.RuneCountInString(body))
+	} else {
+		html := `
+			<!DOCTYPE html>
+			<html>
+				<head>
+					<title>Create an article -- My technical blog</title>
+					<style type="text/css">.error {color:red;}</style>
+				</head>
+				<body>
+					<form action="{{ .URL }}" method="post">
+						<p><input type="text" name="title" value="{{ .Title }}"></p>
+						{{ with .Errors.title }}
+						<p class="error">{{ . }}</p>
+						{{ end }}
+
+						<p><textarea name="body" cols="30" rows="10">{{ .Body }}</textarea></p>
+						{{ with .Errors.body }}
+						<p class="error">{{ . }}</p>
+						{{ end }}
+
+						<p><button type="submit">submit</button></p>
+					</form>
+				</body>
+			</html>
+		`
+
+		storeURL, _ := router.Get("articles.store").URL()
+		data := ArticlesFormData{
+			Title:  title,
+			Body:   body,
+			URL:    storeURL,
+			Errors: errors,
+		}
+
+		tmpl, err := template.New("create-form").Parse(html)
+		if err != nil {
+			panic(err)
+		}
+
+		err = tmpl.Execute(w, data)
+		if err != nil {
+			panic(err)
+		}
+	}
 }
 
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
