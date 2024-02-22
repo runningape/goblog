@@ -75,7 +75,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 					<style type="text/css">.error {color:red;}</style>
 				</head>
 				<body>
-					<form action="{{ .URL }} method="post">
+					<form action="{{ .URL }}" method="post">
 						<p><input type="text" name="title" value="{{ .Title }}"></p>
 						{{ with .Errors.title }}
 						<p class="error">{{ . }}</p>
