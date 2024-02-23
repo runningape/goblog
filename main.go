@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -95,11 +96,16 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errors) == 0 {
-		fmt.Fprint(w, "难证通过！<br>")
-		fmt.Fprintf(w, "title's value:%v <br>", title)
-		fmt.Fprintf(w, "title's len:%v <br>", utf8.RuneCountInString(title))
-		fmt.Fprintf(w, "body's value:%v <br>", body)
-		fmt.Fprintf(w, "body's len:%v <br>", utf8.RuneCountInString(body))
+		lastInsertID, err := saveArticleToDB(title, body)
+
+		if lastInsertID > 0 {
+			fmt.Fprint(w, "insert successful, ID:"+strconv.FormatInt(lastInsertID, 10))
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+		}
+
 	} else {
 
 		storeURL, _ := router.Get("articles.store").URL()
@@ -122,6 +128,34 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+}
+
+func saveArticleToDB(title, body string) (int64, error) {
+	var (
+		id   int64
+		err  error
+		rs   sql.Result
+		stmt *sql.Stmt
+	)
+
+	stmt, err = db.Prepare("INSERT INTO articles (title, body) VALUES(?,?)")
+	if err != nil {
+		return 0, err
+	}
+
+	defer stmt.Close()
+
+	rs, err = stmt.Exec(title, body)
+	if err != nil {
+		return 0, err
+	}
+
+	if id, err = rs.LastInsertId(); id > 0 {
+		return id, nil
+	}
+
+	return 0, err
+
 }
 
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
