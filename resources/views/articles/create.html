@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Create an Article -- My technical blog</title>
+        <style type="text/css">.error {color:red;}</style>
+    </head>
+    <body>
+        <form action="{{ .URL }}" method="post">
+            <p><input type="text" name="title" value="{{ .Title }}"></p>
+            {{ with .Errors.title }}
+            <p class="error">{{ . }}</p>
+            {{ end }}
+
+            <p><textarea name="body" id="body" cols="30" rows="10">{{ .Body }}</textarea></p>
+            {{ with .Errors.body }}
+            <p class="error">{{ . }}</p>
+            {{end}}
+
+            <p><button type="submit">Submit</button></p>
+        </form>
+    </body>
+</html>
