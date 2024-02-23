@@ -24,6 +24,7 @@ func initDB() {
 		User:                 "root",
 		Passwd:               "dyhuangZz223",
 		Addr:                 "127.0.0.1:3306",
+		Net:                  "tcp",
 		DBName:               "goblog",
 		AllowNativePasswords: true,
 	}
