@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -23,6 +24,11 @@ type ArticlesFormData struct {
 	Title, Body string
 	URL         *url.URL
 	Errors      map[string]string
+}
+
+type Article struct {
+	Title, Body string
+	ID          int64
 }
 
 func initDB() {
@@ -69,7 +75,28 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	fmt.Fprint(w, "文章 ID："+id)
+
+	article := Article{}
+	query := "SELECT * FROM articles WHERE id = ?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not found")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Internal Server Error")
+		}
+	} else {
+		fmt.Println(article)
+		tmpl, err := template.ParseFiles("resources/views/articles/show.html")
+		checkError(err)
+
+		err = tmpl.Execute(w, article)
+		checkError(err)
+	}
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,11 +123,17 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errors) == 0 {
-		fmt.Fprint(w, "Validation successful!")
-		fmt.Fprintf(w, "title's value: %v <br>", title)
-		fmt.Fprintf(w, "title's len: %v <br>", utf8.RuneCountInString(title))
-		fmt.Fprintf(w, "content's value: %v <br>", body)
-		fmt.Fprintf(w, "content's len: %v <br>", utf8.RuneCountInString(body))
+		lastInsertId, err := saveArticleToDB(title, body)
+
+		if lastInsertId > 0 {
+			fmt.Fprint(w, "insert successful! ID:"+strconv.FormatInt(lastInsertId, 10))
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 服务器内部错误")
+
+		}
+
 	} else {
 		storeURL, _ := router.Get("articles.store").URL()
 		data := ArticlesFormData{
@@ -120,6 +153,34 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	}
+}
+
+func saveArticleToDB(title, body string) (int64, error) {
+	var (
+		id   int64
+		err  error
+		rs   sql.Result
+		stmt *sql.Stmt
+	)
+
+	stmt, err = db.Prepare("INSERT INTO articles (title, body) VALUES (?,?)")
+	if err != nil {
+		return 0, err
+	}
+
+	defer stmt.Close()
+
+	rs, err = stmt.Exec(title, body)
+	if err != nil {
+		return 0, err
+	}
+
+	if id, err = rs.LastInsertId(); id > 0 {
+		return id, nil
+	}
+
+	return 0, err
+
 }
 
 func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
