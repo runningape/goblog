@@ -72,12 +72,8 @@ func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	article := Article{}
-	query := "SELECT * FROM articles WHERE id = ?"
-	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	id := getRouteVariable("id", r)
+	article, err := getArticleByID(id)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -104,20 +100,7 @@ func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.PostFormValue("title")
 	body := r.PostFormValue("body")
 
-	errors := make(map[string]string)
-
-	if title == "" {
-		errors["title"] = "标题不能为空"
-	} else if utf8.RuneCountInString(title) < 3 ||
-		utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "标题需介于 3-40 字符之间"
-	}
-
-	if body == "" {
-		errors["body"] = "内容不能为空"
-	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "内容不能少于 10 字符"
-	}
+	errors := validateArticleFormData(title, body)
 
 	if len(errors) == 0 {
 		lastInsertId, err := saveArticleToDB(title, body)
@@ -200,6 +183,116 @@ func articlesCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
+	id := getRouteVariable("id", r)
+	article, err := getArticleByID(id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not found")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Internal Server Error")
+		}
+	} else {
+		updateURL, _ := router.Get("articles.update").URL("id", id)
+		data := ArticlesFormData{
+			Title:  article.Title,
+			Body:   article.Body,
+			URL:    updateURL,
+			Errors: nil,
+		}
+
+		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+		checkError(err)
+		err = tmpl.Execute(w, data)
+		checkError(err)
+	}
+}
+
+func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
+	id := getRouteVariable("id", r)
+	_, err := getArticleByID(id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not founc")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Internal Sever Error")
+		}
+	} else {
+		title := r.PostFormValue("title")
+		body := r.PostFormValue("body")
+		errors := validateArticleFormData(title, body)
+
+		if len(errors) == 0 {
+			query := "UPDATE articles SET title = ?, body = ? WHERE id = ?"
+			rs, err := db.Exec(query, title, body, id)
+
+			if err != nil {
+				checkError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 Internal Server Error")
+			}
+
+			if n, _ := rs.RowsAffected(); n > 0 {
+				showURL, _ := router.Get("articles.show").URL("id", id)
+				http.Redirect(w, r, showURL.String(), http.StatusFound)
+			} else {
+				fmt.Fprint(w, "You didn't make and changes")
+			}
+		} else {
+			updateURL, _ := router.Get("articles.update").URL("id", id)
+			data := ArticlesFormData{
+				Title:  title,
+				Body:   body,
+				URL:    updateURL,
+				Errors: errors,
+			}
+			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+			checkError(err)
+			err = tmpl.Execute(w, data)
+			checkError(err)
+		}
+	}
+}
+
+func getRouteVariable(parameterName string, r *http.Request) string {
+	vars := mux.Vars(r)
+	return vars[parameterName]
+}
+
+func getArticleByID(id string) (Article, error) {
+	article := Article{}
+	query := "SELECT * FROM articles WHERE id = ?"
+	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
+	return article, err
+}
+
+func validateArticleFormData(title, body string) map[string]string {
+	errors := make(map[string]string)
+
+	if title == "" {
+		errors["title"] = "The title cannot be empty."
+	} else if utf8.RuneCountInString(title) < 3 ||
+		utf8.RuneCountInString(title) > 40 {
+		errors["title"] = "The title length must be between 3 and 40 characters."
+	}
+
+	if body == "" {
+		errors["body"] = "The content cannot be empty."
+	} else if utf8.RuneCountInString(body) < 10 {
+		errors["body"] = "The content length cannot be less than 10 characters"
+	}
+
+	return errors
+}
+
 func forceHTMLMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -238,12 +331,21 @@ func main() {
 
 	router.HandleFunc("/articles/{id:[0-9]+}",
 		articlesShowHandler).Methods("GET").Name("articles.show")
+
 	router.HandleFunc("/articles",
 		articlesIndexHandler).Methods("GET").Name("articles.index")
+
 	router.HandleFunc("/articles",
 		articlesStoreHandler).Methods("POST").Name("articles.store")
+
 	router.HandleFunc("/articles/create",
 		articlesCreateHandler).Methods("GET").Name("articles.create")
+
+	router.HandleFunc("/articles/{id:[0-9]+}/edit",
+		articlesEditHandler).Methods("GET").Name("articles.edit")
+
+	router.HandleFunc("/articles/{id:[0-9]+}",
+		articlesUpdateHandler).Methods("POST").Name("articles.update")
 
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
