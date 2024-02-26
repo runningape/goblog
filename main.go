@@ -89,6 +89,16 @@ type Article struct {
 	ID          int64
 }
 
+func (a Article) Link() string {
+	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
+
+	if err != nil {
+		checkError(err)
+		return ""
+	}
+	return showURL.String()
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h1>Hello,这里是goblog</h1>")
 }
@@ -125,7 +135,27 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "访问文章列表")
+
+	rows, err := db.Query("SELECT * FROM articles")
+	checkError(err)
+	defer rows.Close()
+
+	var articles []Article
+
+	for rows.Next() {
+		var article Article
+		err := rows.Scan(&article.ID, &article.Title, &article.Body)
+		checkError(err)
+		articles = append(articles, article)
+	}
+
+	err = rows.Err()
+	checkError(err)
+
+	tmpl, err := template.ParseFiles("resources/views/articles/index.html")
+	checkError(err)
+	err = tmpl.Execute(w, articles)
+	checkError(err)
 }
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +310,7 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 				showURL, _ := router.Get("articles.show").URL("id", id)
 				http.Redirect(w, r, showURL.String(), http.StatusFound)
 			} else {
-				fmt.Fprint(w, "You haven't made and changes.")
+				fmt.Fprint(w, "You haven't made any changes.")
 			}
 		} else {
 			updateURL, _ := router.Get("articles.update").URL("id", id)
