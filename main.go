@@ -34,6 +34,18 @@ func (a Article) Link() string {
 	return showURL.String()
 }
 
+func (a Article) Delete() (rowsAffected int64, err error) {
+	rs, err := db.Exec("DELETE FROM articles WHERE id =" + strconv.FormatInt(a.ID, 10))
+	if err != nil {
+		return 0, err
+	}
+
+	if n, _ := rs.RowsAffected(); n > 0 {
+		return n, nil
+	}
+	return 0, nil
+}
+
 type Article struct {
 	Title, Body string
 	ID          int64
@@ -94,11 +106,29 @@ func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		tmpl, err := template.ParseFiles("resources/views/articles/show.html")
+		tmpl, err := template.New("show.html").
+			Funcs(template.FuncMap{
+				"RouteNameToURL": RouteNameToURL,
+				"Int64ToString":  Int64ToString,
+			}).ParseFiles("resources/views/articles/show.html")
+
 		checkError(err)
 		err = tmpl.Execute(w, article)
 		checkError(err)
 	}
+}
+
+func RouteNameToURL(routeName string, pairs ...string) string {
+	url, err := router.Get(routeName).URL(pairs...)
+	if err != nil {
+		checkError(err)
+		return ""
+	}
+	return url.String()
+}
+
+func Int64ToString(num int64) string {
+	return strconv.FormatInt(num, 10)
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -291,6 +321,44 @@ func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	id := getRouteVariable("id", r)
+	article, err := getArticleByID(id)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not found")
+		} else {
+			checkError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Intelnal Server Error")
+		}
+	} else {
+		rowsAffected, err := article.Delete()
+
+		if err != nil {
+			if err == sql.ErrNoRows {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprint(w, "404 article not found")
+			} else {
+				checkError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 Internal Server Error")
+			}
+		} else {
+			if rowsAffected > 0 {
+				indexURL, _ := router.Get("articles.index").URL()
+				http.Redirect(w, r, indexURL.String(), http.StatusFound)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+				fmt.Fprint(w, "404 article not found")
+			}
+		}
+	}
+
+}
+
 func getRouteVariable(parameterName string, r *http.Request) string {
 	vars := mux.Vars(r)
 	return vars[parameterName]
@@ -375,6 +443,9 @@ func main() {
 
 	router.HandleFunc("/articles/{id:[0-9]+}",
 		articlesUpdateHandler).Methods("POST").Name("articles.update")
+
+	router.HandleFunc("/articles/{id:[0-9]+}/delete",
+		articlesDeleteHandler).Methods("POST").Name("articles.delete")
 
 	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
