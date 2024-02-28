@@ -8,5 +8,11 @@
         <p>ID: {{ .ID }}</p>
         <p>TITLE: {{ .Title }}</p>
         <p>BODY: {{ .Body }}</p>
+    
+        {{/* This is a comment */}}
+        {{ $idString := Int64ToString .ID }}
+        <form action="{{ RouteNameToURL "articles.delete" "id" $idString }}" method="post">
+            <button type="submit" onclick="return confirm('Are you sure you want to delete?')">Delete Article</button>
+        </form>
     </body>
 </html>
