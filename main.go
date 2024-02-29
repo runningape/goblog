@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/runningape/goblog/logger"
+	"github.com/runningape/goblog/pkg/database"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/types"
 
@@ -407,8 +408,8 @@ func createTables() {
 }
 
 func main() {
-	initDB()
-	createTables()
+	database.Initialize()
+	db = database.DB
 
 	route.Initialize()
 	router = route.Router
