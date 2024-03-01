@@ -373,9 +373,6 @@ func main() {
 	route.Initialize()
 	router = route.Router
 
-	router.HandleFunc("/", homeHandler).Methods("GET").Name("home")
-	router.HandleFunc("/about", aboutHandler).Methods("GET").Name("about")
-
 	router.HandleFunc("/articles/{id:[0-9]+}",
 		articlesShowHandler).Methods("GET").Name("articles.show")
 
@@ -396,8 +393,6 @@ func main() {
 
 	router.HandleFunc("/articles/{id:[0-9]+}/delete",
 		articlesDeleteHandler).Methods("POST").Name("articles.delete")
-
-	router.NotFoundHandler = http.HandlerFunc(notFoundHandler)
 
 	router.Use(forceHTMLMiddleware)
 
