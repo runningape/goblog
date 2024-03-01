@@ -8,11 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
-	"time"
 	"unicode/utf8"
 
-	"github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/runningape/goblog/pkg/database"
 	"github.com/runningape/goblog/pkg/logger"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/types"
@@ -51,28 +50,6 @@ func (a Article) Delete() (rowsAffected int64, err error) {
 type Article struct {
 	Title, Body string
 	ID          int64
-}
-
-func initDB() {
-	var err error
-	config := mysql.Config{
-		User:                 "root",
-		Passwd:               "dyhuangZz223",
-		Addr:                 "127.0.0.1",
-		Net:                  "tcp",
-		DBName:               "goblog",
-		AllowNativePasswords: true,
-	}
-
-	db, err = sql.Open("mysql", config.FormatDSN())
-	logger.LogError(err)
-
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
-	err = db.Ping()
-	logger.LogError(err)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -389,22 +366,9 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 	})
 }
 
-func createTables() {
-	createArticlesSQL := `
-		CREATE TABLE IF NOT EXISTS articles(
-			id bigint(20) PRIMARY KEY AUTO_INCREMENT NOT NULL,
-			title varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-			body longtext COLLATE utf8mb4_unicode_ci 
-		);
-	`
-
-	_, err := db.Exec(createArticlesSQL)
-	logger.LogError(err)
-}
-
 func main() {
-	initDB()
-	createTables()
+	database.Initialize()
+	db = database.DB
 
 	route.Initialize()
 	router = route.Router
