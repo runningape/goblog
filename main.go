@@ -12,10 +12,9 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
+	"github.com/runningape/goblog/bootstrap"
 	"github.com/runningape/goblog/pkg/database"
 	"github.com/runningape/goblog/pkg/logger"
-	"github.com/runningape/goblog/pkg/route"
-	"github.com/runningape/goblog/pkg/types"
 )
 
 var router *mux.Router
@@ -65,37 +64,6 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(w, "<h1>您访问的页面不存在。。。</h1><p>Please contact me</p>")
-}
-
-func articlesShowHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
-
-	article := Article{}
-	query := "SELECT * FROM articles WHERE id = ?"
-	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
-	} else {
-		tmpl, err := template.New("show.html").
-			Funcs(template.FuncMap{
-				"RouteNameToURL": route.Name2URL,
-				"Int64ToString":  types.Int64ToString,
-			}).ParseFiles("resources/views/articles/show.html")
-
-		logger.LogError(err)
-
-		err = tmpl.Execute(w, article)
-		logger.LogError(err)
-	}
 }
 
 func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
@@ -373,8 +341,7 @@ func main() {
 	database.Initialize()
 	db = database.DB
 
-	route.Initialize()
-	router = route.Router
+	router = bootstrap.SetupRoute()
 
 	router.HandleFunc("/articles/{id:[0-9]+}", articlesShowHandler).Methods("GET").Name("articles.show")
 
