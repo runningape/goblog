@@ -6,10 +6,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var Router *mux.Router
+var route *mux.Router
+
+func SetRoute(r *mux.Router) {
+	route = r
+}
 
 func Name2URL(routerName string, pairs ...string) string {
-	url, err := Router.Get(routerName).URL(pairs...)
+	url, err := route.Get(routerName).URL(pairs...)
 	if err != nil {
 		//checkError(err)
 		return ""
