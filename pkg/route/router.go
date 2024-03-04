@@ -4,14 +4,19 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/runningape/goblog/pkg/logger"
 )
 
-var Router *mux.Router
+var route *mux.Router
+
+func SetRoute(r *mux.Router) {
+	route = r
+}
 
 func Name2URL(routerName string, pair ...string) string {
-	url, err := Router.Get(routerName).URL(pair...)
+	url, err := route.Get(routerName).URL(pair...)
 	if err != nil {
-		//checkError(err)
+		logger.LogError(err)
 		return ""
 	}
 	return url.String()
