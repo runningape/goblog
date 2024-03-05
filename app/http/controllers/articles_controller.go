@@ -3,7 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/runningape/goblog/app/models/article"
 	"github.com/runningape/goblog/pkg/logger"
@@ -13,6 +15,12 @@ import (
 )
 
 type ArticlesController struct {
+}
+
+type ArticlesFormData struct {
+	Title, Body string
+	URL         string
+	Errors      map[string]string
 }
 
 func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
@@ -53,6 +61,81 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 		tmpl, err := template.ParseFiles("resources/views/articles/index.html")
 		logger.LogError(err)
 		err = tmpl.Execute(w, article)
+		logger.LogError(err)
+	}
+}
+
+func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
+	storeURL := route.Name2URL("articles.store")
+	data := ArticlesFormData{
+		Title:  "",
+		Body:   "",
+		URL:    storeURL,
+		Errors: nil,
+	}
+
+	tmpl, err := template.ParseFiles("resources/views/articles/create.html")
+	logger.LogError(err)
+	err = tmpl.Execute(w, data)
+	logger.LogError(err)
+}
+
+func validateArticleFormData(title, body string) map[string]string {
+	errors := make(map[string]string)
+
+	if title == "" {
+		errors["title"] = "The title cannot be empty. "
+	} else if utf8.RuneCountInString(title) < 3 ||
+		utf8.RuneCountInString(title) > 40 {
+		errors["title"] = "The title length must be between 3 to 40 characters."
+	}
+
+	if body == "" {
+		errors["body"] = "The content cannot be empty."
+	} else if utf8.RuneCountInString(body) < 10 {
+		errors["body"] = "The content length must be more than 10 characters."
+	}
+
+	return errors
+
+}
+
+func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
+
+	title := r.PostFormValue("title")
+	body := r.PostFormValue("body")
+
+	errors := validateArticleFormData(title, body)
+
+	if len(errors) == 0 {
+		_article := article.Article{
+			Title: title,
+			Body:  body,
+		}
+
+		_article.Create()
+
+		if _article.ID > 0 {
+			fmt.Fprint(w, "Insert successful! ID:"+strconv.FormatUint(_article.ID, 10))
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Failed to create the artilce, please contact the administrator")
+		}
+
+	} else {
+		storeURL := route.Name2URL("articles.store")
+
+		data := ArticlesFormData{
+			Title:  title,
+			Body:   body,
+			URL:    storeURL,
+			Errors: errors,
+		}
+
+		tmpl, err := template.ParseFiles("resources/views/articles/create.html")
+		logger.LogError(err)
+
+		err = tmpl.Execute(w, data)
 		logger.LogError(err)
 	}
 }
