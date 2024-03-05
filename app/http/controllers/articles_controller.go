@@ -142,3 +142,88 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 		logger.LogError(err)
 	}
 }
+
+func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
+
+	id := route.GetRouteVariable("id", r)
+	article, err := article.Get(id)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not found")
+		} else {
+			logger.LogError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Internal Server Error")
+		}
+	} else {
+		updateURL := route.Name2URL("articles.update", "id", id)
+		data := ArticlesFormData{
+			Title:  article.Title,
+			Body:   article.Body,
+			URL:    updateURL,
+			Errors: nil,
+		}
+
+		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+		logger.LogError(err)
+		err = tmpl.Execute(w, data)
+		logger.LogError(err)
+	}
+}
+
+func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
+
+	id := route.GetRouteVariable("id", r)
+	_article, err := article.Get(id)
+
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "404 Article not found")
+		} else {
+			logger.LogError(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "500 Internal Server Error")
+		}
+	} else {
+		title := r.PostFormValue("title")
+		body := r.PostFormValue("body")
+
+		errors := validateArticleFormData(title, body)
+
+		if len(errors) == 0 {
+			_article.Title = title
+			_article.Body = body
+			rowsAffected, err := _article.Update()
+
+			if err != nil {
+				logger.LogError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 Internal Server Error")
+			}
+
+			if rowsAffected > 0 {
+				showURL := route.Name2URL("articles.index")
+				http.Redirect(w, r, showURL, http.StatusFound)
+			} else {
+				fmt.Fprint(w, "You haven't made any changes.")
+			}
+
+		} else {
+			updateURL := route.Name2URL("articles.update", "id", id)
+			data := ArticlesFormData{
+				Title:  title,
+				Body:   body,
+				URL:    updateURL,
+				Errors: errors,
+			}
+
+			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
+			logger.LogError(err)
+			err = tmpl.Execute(w, data)
+			logger.LogError(err)
+		}
+	}
+}
