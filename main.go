@@ -25,15 +25,6 @@ type ArticlesFormData struct {
 	Errors      map[string]string
 }
 
-func (a Article) Link() string {
-	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
-	if err != nil {
-		logger.LogError(err)
-		return ""
-	}
-	return showURL.String()
-}
-
 func (a Article) Delete() (rowsAffected int64, err error) {
 	rs, err := db.Exec("DELETE FROM articles WHERE id =" + strconv.FormatInt(a.ID, 10))
 	if err != nil {
@@ -345,9 +336,6 @@ func main() {
 
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
-
-	router.HandleFunc("/articles",
-		articlesIndexHandler).Methods("GET").Name("articles.index")
 
 	router.HandleFunc("/articles",
 		articlesStoreHandler).Methods("POST").Name("articles.store")
