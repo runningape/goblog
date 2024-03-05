@@ -27,15 +27,6 @@ type ArticlesFormData struct {
 	Errors      map[string]string
 }
 
-func (a Article) Link() string {
-	showURL, err := router.Get("articles.show").URL("id", strconv.FormatInt(a.ID, 10))
-	if err != nil {
-		logger.LogError(err)
-		return ""
-	}
-	return showURL.String()
-}
-
 func (a Article) Delete() (rowsAffected int64, err error) {
 	rs, err := db.Exec("DELETE FROM articles WHERE id =" + strconv.FormatInt(a.ID, 10))
 	if err != nil {
@@ -65,29 +56,6 @@ func aboutHandler(w http.ResponseWriter, r *http.Request) {
 func notFoundHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
 	fmt.Fprint(w, "<h1>您访问的页面不存在。。。</h1><p>Please contact me</p>")
-}
-
-func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT * FROM articles")
-	logger.LogError(err)
-	defer rows.Close()
-
-	var articles []Article
-
-	for rows.Next() {
-		var article Article
-		err := rows.Scan(&article.ID, &article.Title, &article.Body)
-		logger.LogError(err)
-		articles = append(articles, article)
-	}
-
-	err = rows.Err()
-	logger.LogError(err)
-
-	tmpl, err := template.ParseFiles("resources/views/articles/index.html")
-	logger.LogError(err)
-	err = tmpl.Execute(w, articles)
-	logger.LogError(err)
 }
 
 func articlesStoreHandler(w http.ResponseWriter, r *http.Request) {
@@ -344,8 +312,6 @@ func main() {
 
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
-
-	router.HandleFunc("/articles", articlesIndexHandler).Methods("GET").Name("articles.index")
 
 	router.HandleFunc("/articles", articlesStoreHandler).Methods("POST").Name("articles.store")
 
