@@ -79,85 +79,6 @@ func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func articlesEditHandler(w http.ResponseWriter, r *http.Request) {
-	id := getRouteVariable("id", r)
-	article, err := getArticleByID(id)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
-	} else {
-		updateURL, _ := router.Get("articles.update").URL("id", id)
-		data := ArticlesFormData{
-			Title:  article.Title,
-			Body:   article.Body,
-			URL:    updateURL,
-			Errors: nil,
-		}
-
-		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-		logger.LogError(err)
-		err = tmpl.Execute(w, data)
-		logger.LogError(err)
-	}
-}
-
-func articlesUpdateHandler(w http.ResponseWriter, r *http.Request) {
-	id := getRouteVariable("id", r)
-	_, err := getArticleByID(id)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not founc")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Sever Error")
-		}
-	} else {
-		title := r.PostFormValue("title")
-		body := r.PostFormValue("body")
-		errors := validateArticleFormData(title, body)
-
-		if len(errors) == 0 {
-			query := "UPDATE articles SET title = ?, body = ? WHERE id = ?"
-			rs, err := db.Exec(query, title, body, id)
-
-			if err != nil {
-				logger.LogError(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "500 Internal Server Error")
-			}
-
-			if n, _ := rs.RowsAffected(); n > 0 {
-				showURL, _ := router.Get("articles.show").URL("id", id)
-				http.Redirect(w, r, showURL.String(), http.StatusFound)
-			} else {
-				fmt.Fprint(w, "You didn't make and changes")
-			}
-		} else {
-			updateURL, _ := router.Get("articles.update").URL("id", id)
-			data := ArticlesFormData{
-				Title:  title,
-				Body:   body,
-				URL:    updateURL,
-				Errors: errors,
-			}
-			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-			logger.LogError(err)
-			err = tmpl.Execute(w, data)
-			logger.LogError(err)
-		}
-	}
-}
-
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	id := getRouteVariable("id", r)
 	article, err := getArticleByID(id)
@@ -249,12 +170,6 @@ func main() {
 
 	bootstrap.SetupDB()
 	router = bootstrap.SetupRoute()
-
-	router.HandleFunc("/articles/{id:[0-9]+}/edit",
-		articlesEditHandler).Methods("GET").Name("articles.edit")
-
-	router.HandleFunc("/articles/{id:[0-9]+}",
-		articlesUpdateHandler).Methods("POST").Name("articles.update")
 
 	router.HandleFunc("/articles/{id:[0-9]+}/delete",
 		articlesDeleteHandler).Methods("POST").Name("articles.delete")
