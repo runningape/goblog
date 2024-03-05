@@ -4,11 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
-	"text/template"
-	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 	"github.com/runningape/goblog/bootstrap"
@@ -18,12 +15,6 @@ import (
 
 var router *mux.Router
 var db *sql.DB
-
-type ArticlesFormData struct {
-	Title, Body string
-	URL         *url.URL
-	Errors      map[string]string
-}
 
 func (a Article) Delete() (rowsAffected int64, err error) {
 	rs, err := db.Exec("DELETE FROM articles WHERE id =" + strconv.FormatInt(a.ID, 10))
@@ -40,43 +31,6 @@ func (a Article) Delete() (rowsAffected int64, err error) {
 type Article struct {
 	Title, Body string
 	ID          int64
-}
-
-func homeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<h1>welcome to my goblog!")
-}
-
-func aboutHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "about page")
-}
-
-func notFoundHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprint(w, "<h1>请求的页面未找到 :(</h1><p>Please  sendto me</p>")
-}
-
-func articlesIndexHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT * FROM articles")
-	logger.LogError(err)
-	defer rows.Close()
-
-	var articles []Article
-
-	for rows.Next() {
-		var article Article
-		err := rows.Scan(&article.ID, &article.Title, &article.Body)
-		logger.LogError(err)
-		articles = append(articles, article)
-	}
-
-	err = rows.Err()
-	logger.LogError(err)
-
-	tmpl, err := template.ParseFiles("resources/views/articles/index.html")
-	logger.LogError(err)
-	err = tmpl.Execute(w, articles)
-	logger.LogError(err)
-
 }
 
 func articlesDeleteHandler(w http.ResponseWriter, r *http.Request) {
@@ -127,25 +81,6 @@ func getArticleByID(id string) (Article, error) {
 	query := "SELECT * FROM articles WHERE id = ?"
 	err := db.QueryRow(query, id).Scan(&article.ID, &article.Title, &article.Body)
 	return article, err
-}
-
-func validateArticleFormData(title, body string) map[string]string {
-	errors := make(map[string]string)
-
-	if title == "" {
-		errors["title"] = "The title cannot be empty."
-	} else if utf8.RuneCountInString(title) < 3 ||
-		utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "The title length must be between 3 and 40 characters."
-	}
-
-	if body == "" {
-		errors["body"] = "The content cannot be empty."
-	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "The content length cannot be less than 10 characters"
-	}
-
-	return errors
 }
 
 func forceHTMLMiddleware(next http.Handler) http.Handler {
