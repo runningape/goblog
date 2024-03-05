@@ -1,6 +1,7 @@
 package article
 
 import (
+	"github.com/runningape/goblog/pkg/logger"
 	"github.com/runningape/goblog/pkg/model"
 	"github.com/runningape/goblog/pkg/types"
 )
@@ -20,4 +21,12 @@ func GetAll() ([]Article, error) {
 		return article, err
 	}
 	return article, nil
+}
+
+func (article *Article) Create() error {
+	if err := model.DB.Create(&article).Error; err != nil {
+		logger.LogError(err)
+		return err
+	}
+	return nil
 }
