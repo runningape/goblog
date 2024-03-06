@@ -22,4 +22,9 @@ func RegisterWebRoutes(r *mux.Router) {
 	r.HandleFunc("/articles/{id:[0-9]+}/edit", ac.Edit).Methods("GET").Name("articles.edit")
 	r.HandleFunc("/articles/{id:[0-9]+}", ac.Update).Methods("POST").Name("articles.update")
 	r.HandleFunc("/articles/{id:[0-9]+}/delete", ac.Delete).Methods("POST").Name("articles.delete")
+
+	r.PathPrefix("/css/").Handler(http.FileServer(http.Dir("./public")))
+	r.PathPrefix("/js/").Handler(http.FileServer(http.Dir("./public")))
+
+	// r.Use(middlewares.ForceHTML)
 }
