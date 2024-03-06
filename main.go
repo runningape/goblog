@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -11,7 +10,6 @@ import (
 )
 
 var router *mux.Router
-var db *sql.DB
 
 func main() {
 	bootstrap.SetupDB()
