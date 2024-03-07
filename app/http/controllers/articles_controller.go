@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"unicode/utf8"
 
 	"github.com/runningape/goblog/app/models/article"
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/route"
-	"github.com/runningape/goblog/pkg/types"
+	"github.com/runningape/goblog/pkg/view"
 	"gorm.io/gorm"
 )
 
@@ -40,21 +39,7 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		viewDir := "resources/views"
-		files, err := filepath.Glob(viewDir + "/layouts/*.html")
-		logger.LogError(err)
-		newfiles := append(files, viewDir+"/articles/show.html")
-
-		tmpl, err := template.New("show.html").
-			Funcs(template.FuncMap{
-				"RouteNameToURL": route.Name2URL,
-				"Uint64ToString": types.Uint64ToString,
-			}).ParseFiles(newfiles...)
-
-		logger.LogError(err)
-
-		err = tmpl.ExecuteTemplate(w, "app", article)
-		logger.LogError(err)
+		view.Render(w, "articles.show", article)
 	}
 }
 
@@ -66,14 +51,7 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 Internal Server Error")
 	} else {
-		viewDir := "resources/views"
-		files, err := filepath.Glob(viewDir + "/layouts/*.html")
-		logger.LogError(err)
-		newfiles := append(files, viewDir+"/articles/index.html")
-		tmpl, err := template.ParseFiles(newfiles...)
-		logger.LogError(err)
-		err = tmpl.ExecuteTemplate(w, "app", article)
-		logger.LogError(err)
+		view.Render(w, "articles.index", article)
 	}
 }
 

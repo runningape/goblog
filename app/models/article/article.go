@@ -3,11 +3,12 @@ package article
 import (
 	"strconv"
 
+	"github.com/runningape/goblog/app/models"
 	"github.com/runningape/goblog/pkg/route"
 )
 
 type Article struct {
-	ID    uint64
+	models.BaseModel
 	Title string
 	Body  string
 }
