@@ -40,15 +40,20 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
+		viewDir := "resources/views"
+		files, err := filepath.Glob(viewDir + "/layouts/*.html")
+		logger.LogError(err)
+		newfiles := append(files, viewDir+"/articles/show.html")
+
 		tmpl, err := template.New("show.html").
 			Funcs(template.FuncMap{
 				"RouteNameToURL": route.Name2URL,
 				"Uint64ToString": types.Uint64ToString,
-			}).ParseFiles("resources/views/articles/show.html")
+			}).ParseFiles(newfiles...)
 
 		logger.LogError(err)
 
-		err = tmpl.Execute(w, article)
+		err = tmpl.ExecuteTemplate(w, "app", article)
 		logger.LogError(err)
 	}
 }
