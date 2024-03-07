@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"unicode/utf8"
 
@@ -60,9 +61,13 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 Internal Server Error")
 	} else {
-		tmpl, err := template.ParseFiles("resources/views/articles/index.html")
+		viewDir := "resources/views"
+		files, err := filepath.Glob(viewDir + "/layouts/*.html")
 		logger.LogError(err)
-		err = tmpl.Execute(w, article)
+		newfiles := append(files, viewDir+"/articles/index.html")
+		tmpl, err := template.ParseFiles(newfiles...)
+		logger.LogError(err)
+		err = tmpl.ExecuteTemplate(w, "app", article)
 		logger.LogError(err)
 	}
 }
