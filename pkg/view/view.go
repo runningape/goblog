@@ -1,28 +1,31 @@
 package view
 
 import (
+	"html/template"
 	"io"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/runningape/goblog/pkg/logger"
 	"github.com/runningape/goblog/pkg/route"
 )
 
-func Render(w io.Writer, name string, data interface{}) {
+func Render(w io.Writer, data interface{}, tplFiles ...string) {
 	viewDir := "resources/views/"
-	name = strings.Replace(name, ".", "/", -1)
 
-	files, err := filepath.Glob(viewDir + "layouts/*.html")
+	for i, f := range tplFiles {
+		tplFiles[i] = viewDir + strings.Replace(f, ".", "/", -1) + ".html"
+	}
+
+	layoutFiles, err := filepath.Glob(viewDir + "layouts/*.html")
 	logger.LogError(err)
 
-	newFiles := append(files, viewDir+name+".html")
+	allFiles := append(layoutFiles, tplFiles...)
 
-	tmpl, err := template.New(name + ".html").
+	tmpl, err := template.New("").
 		Funcs(template.FuncMap{
 			"RouteNameToURL": route.Name2URL,
-		}).ParseFiles(newFiles...)
+		}).ParseFiles(allFiles...)
 	logger.LogError(err)
 
 	err = tmpl.ExecuteTemplate(w, "app", data)
