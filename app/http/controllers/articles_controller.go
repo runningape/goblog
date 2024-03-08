@@ -44,14 +44,14 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
-	article, err := article.GetAll()
+	articles, err := article.GetAll()
 
 	if err != nil {
 		logger.LogError(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 Internal Server Error")
 	} else {
-		view.Render(w, "articles.index", article)
+		view.Render(w, "articles.index", articles)
 	}
 }
 
