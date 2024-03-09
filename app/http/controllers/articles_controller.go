@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"text/template"
 	"unicode/utf8"
 
 	"github.com/runningape/goblog/app/models/article"
 	"github.com/runningape/goblog/pkg/logger"
 	"github.com/runningape/goblog/pkg/route"
+	"github.com/runningape/goblog/pkg/view"
 	"gorm.io/gorm"
 )
 
@@ -17,8 +17,9 @@ type ArticlesController struct {
 }
 
 type ArticlesFormData struct {
-	Title, Body, URL string
-	Errors           map[string]string
+	Title, Body string
+	Article     article.Article
+	Errors      map[string]string
 }
 
 func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		view.Render(w, "articles.show", article)
+		view.Render(w, article, "articles.show")
 	}
 }
 
@@ -47,22 +48,12 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprint(w, "500 Internal Server Error")
 	} else {
-		view.Render(w, "articles.index", articles)
+		view.Render(w, articles, "articles.index")
 	}
 }
 
 func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
-	storeURL := route.Name2URL("articles.store")
-	data := ArticlesFormData{
-		Title:  "",
-		Body:   "",
-		URL:    storeURL,
-		Errors: nil,
-	}
-	tmpl, err := template.ParseFiles("resources/views/articles/create.html")
-	logger.LogError(err)
-	err = tmpl.Execute(w, data)
-	logger.LogError(err)
+	view.Render(w, ArticlesFormData{}, "articles.create", "articles._form_field")
 }
 
 func validateArticleFormData(title, body string) map[string]string {
@@ -108,19 +99,11 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else {
-		storeURL := route.Name2URL("articles.store")
-		data := ArticlesFormData{
+		view.Render(w, ArticlesFormData{
 			Title:  title,
 			Body:   body,
-			URL:    storeURL,
 			Errors: errors,
-		}
-
-		tmpl, err := template.ParseFiles("resources/views/articles/create.html")
-		logger.LogError(err)
-
-		err = tmpl.Execute(w, data)
-		logger.LogError(err)
+		}, "articles.create", "articles._form_field")
 	}
 }
 
@@ -139,18 +122,12 @@ func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		updateURL := route.Name2URL("articles.update", "id", id)
-		data := ArticlesFormData{
-			Title:  article.Title,
-			Body:   article.Body,
-			URL:    updateURL,
-			Errors: nil,
-		}
-
-		tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-		logger.LogError(err)
-		err = tmpl.Execute(w, data)
-		logger.LogError(err)
+		view.Render(w, ArticlesFormData{
+			Title:   article.Title,
+			Body:    article.Body,
+			Article: article,
+			Errors:  nil,
+		}, "articles.edit", "articles._form_field")
 	}
 }
 
@@ -193,18 +170,12 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 			}
 
 		} else {
-			updateURL := route.Name2URL("articles.update", "id", id)
-			data := ArticlesFormData{
-				Title:  title,
-				Body:   body,
-				URL:    updateURL,
-				Errors: errors,
-			}
-
-			tmpl, err := template.ParseFiles("resources/views/articles/edit.html")
-			logger.LogError(err)
-			err = tmpl.Execute(w, data)
-			logger.LogError(err)
+			view.Render(w, ArticlesFormData{
+				Title:   _article.Title,
+				Body:    _article.Body,
+				Article: _article,
+				Errors:  errors,
+			}, "articles.edit", "articles._form_field")
 		}
 	}
 }
