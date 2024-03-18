@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/runningape/goblog/app/models/user"
-
+	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/pkg/view"
 )
 
@@ -17,22 +17,30 @@ func (*AuthController) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
-	name := r.PostFormValue("name")
-	email := r.PostFormValue("email")
-	password := r.PostFormValue("password")
-
 	_user := user.User{
-		Name:     name,
-		Email:    email,
-		Password: password,
+		Name:            r.PostFormValue("name"),
+		Email:           r.PostFormValue("email"),
+		Password:        r.PostFormValue("password"),
+		PasswordConfirm: r.PostFormValue("password_confirm"),
 	}
 
-	_user.Create()
+	errs := requests.ValidateRegistrationForm(_user)
 
-	if _user.ID > 0 {
-		fmt.Fprint(w, "Create user successful. ID:"+_user.GetStringID())
+	if len(errs) > 0 {
+		view.RenderSimple(w, view.D{
+			"Errors": errs,
+			"User":   _user,
+		}, "auth.register")
 	} else {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "Create user failed, Please contact the administrator")
+
+		_user.Create()
+
+		if _user.ID > 0 {
+			fmt.Fprint(w, "Create user successful. ID:"+_user.GetStringID())
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			fmt.Fprint(w, "Create user failed, Please contact the administrator")
+		}
 	}
+
 }
