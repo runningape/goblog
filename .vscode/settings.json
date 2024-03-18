@@ -1,0 +1,13 @@
+{
+    "workbench.colorCustomizations": {
+        "editorError.foreground": "#000000ff",
+        "editorInfo.foreground": "#000000ff",
+        "editorWarning.foreground": "#000000ff",
+        "statusBar.background": "#f9e64f",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#f7df1e",
+        "statusBarItem.remoteBackground": "#f9e64f",
+        "statusBarItem.remoteForeground": "#15202b"
+    },
+    "peacock.color": "#f9e64f"
+}
