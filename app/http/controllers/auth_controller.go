@@ -45,3 +45,15 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {
+	// session.Put("uid", "888")
+	// session.Flush()
+	// fmt.Fprint(w, session.Get("uid"))
+	// session.Forget("uid")
+	view.RenderSimple(w, view.D{}, "auth.login")
+}
+
+func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
+
+}
