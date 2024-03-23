@@ -63,4 +63,5 @@ func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 			"password": password,
 		}, "auth.login")
 	}
+
 }
