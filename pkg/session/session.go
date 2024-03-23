@@ -45,6 +45,7 @@ func Flush() {
 func Save() {
 	// Session.Options.Secure = true
 	// Session.Options.HttpOnly = true
+
 	err := Session.Save(Request, Response)
 	logger.LogError(err)
 }
