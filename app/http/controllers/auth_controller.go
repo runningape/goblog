@@ -43,5 +43,16 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "Create user failed, Please contact the administrator")
 		}
 	}
+}
+
+func (*AuthController) Login(w http.ResponseWriter, r *http.Request) {
+	// session.Put("uid", "1")
+	// fmt.Fprint(w, session.Get("uid"))
+	// session.Flush()
+	// session.Forget("uid")
+	view.RenderSimple(w, view.D{}, "auth.login")
+}
+
+func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 
 }
