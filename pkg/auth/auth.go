@@ -49,3 +49,15 @@ func Attempt(email string, password string) error {
 	return nil
 
 }
+
+func Login(_user user.User) {
+	session.Put("uid", _user.GetStringID())
+}
+
+func Logout() {
+	session.Forget("uid")
+}
+
+func Check() bool {
+	return len(_getUID()) > 0
+}

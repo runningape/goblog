@@ -14,21 +14,18 @@
     </ol>
   </div>
 
-  <div class="p-4 bg-white rounded shadow-sm mb-3">
-    <h5>作者</h5>
-    <ol class="list-unstyled mb-0">
-      <li><a href="#">Summer</a></li>
-      <li><a href="#">Aufree</a></li>
-      <li><a href="#">Monkey</a></li>
-    </ol>
-  </div>
 
-  <div class="p-4 bg-white rounded shadow-sm mb-3">
+    <div class="p-4 bg-white rounded shadow-sm mb-3">
     <h5>链接</h5>
     <ol class="list-unstyled">
       <li><a href="#">关于我们</a></li>
-      <li><a href="{{ RouteNameToURL "auth.register" }}">注册</a></li>
-      <li><a href="#">登录</a></li>
+      {{ if .isLogined }}
+        <li><a href="{{ RouteNameToURL "articles.create" }}">开始写作</a></li>
+        <li><a href="">退出</a></li>
+      {{ else }}
+        <li><a href="{{ RouteNameToURL "auth.register" }}">注册</a></li>
+        <li><a href="{{ RouteNameToURL "auth.login" }}">登录</a></li>
+      {{ end }}
     </ol>
   </div>
 </div>
