@@ -6,31 +6,25 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/runningape/goblog/pkg/auth"
 	"github.com/runningape/goblog/pkg/logger"
 	"github.com/runningape/goblog/pkg/route"
 )
 
 type D map[string]interface{}
 
-func Render(w io.Writer, data interface{}, tplFiles ...string) {
+func Render(w io.Writer, data D, tplFiles ...string) {
 	RenderTemplate(w, "app", data, tplFiles...)
 }
 
-func RenderSimple(w io.Writer, data interface{}, tplFiles ...string) {
+func RenderSimple(w io.Writer, data D, tplFiles ...string) {
 	RenderTemplate(w, "simple", data, tplFiles...)
 }
 
-func RenderTemplate(w io.Writer, name string, data interface{}, tplFiles ...string) {
-	viewDir := "resources/views/"
+func RenderTemplate(w io.Writer, name string, data D, tplFiles ...string) {
+	data["isLogined"] = auth.Check()
 
-	for i, f := range tplFiles {
-		tplFiles[i] = viewDir + strings.Replace(f, ".", "/", -1) + ".html"
-	}
-
-	layoutFiles, err := filepath.Glob(viewDir + "layouts/*.html")
-	logger.LogError(err)
-
-	allFiles := append(layoutFiles, tplFiles...)
+	allFiles := getTemplateFiles(tplFiles...)
 
 	tmpl, err := template.New("").
 		Funcs(template.FuncMap{
@@ -40,4 +34,17 @@ func RenderTemplate(w io.Writer, name string, data interface{}, tplFiles ...stri
 
 	err = tmpl.ExecuteTemplate(w, name, data)
 	logger.LogError(err)
+}
+
+func getTemplateFiles(tplFiles ...string) []string {
+	viewDir := "resources/views/"
+
+	for i, f := range tplFiles {
+		tplFiles[i] = viewDir + strings.Replace(f, ".", "/", -1) + ".html"
+	}
+
+	layoutFiles, err := filepath.Glob(viewDir + "layouts/*.html")
+	logger.LogError(err)
+
+	return append(layoutFiles, tplFiles...)
 }
