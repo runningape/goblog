@@ -7,6 +7,7 @@ import (
 	"github.com/runningape/goblog/app/models/user"
 	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/pkg/auth"
+	"github.com/runningape/goblog/pkg/flash"
 	"github.com/runningape/goblog/pkg/view"
 )
 
@@ -37,6 +38,7 @@ func (*AuthController) DoRegister(w http.ResponseWriter, r *http.Request) {
 		_user.Create()
 
 		if _user.ID > 0 {
+			flash.Success("Congratulations on your successful registration.")
 			auth.Login(_user)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
@@ -56,6 +58,7 @@ func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 	password := r.PostFormValue("password")
 
 	if err := auth.Attempt(email, password); err == nil {
+		flash.Success("Welcome back!")
 		http.Redirect(w, r, "/", http.StatusFound)
 	} else {
 		view.RenderSimple(w, view.D{
@@ -69,5 +72,6 @@ func (*AuthController) DoLogin(w http.ResponseWriter, r *http.Request) {
 
 func (*AuthController) Logout(w http.ResponseWriter, r *http.Request) {
 	auth.Logout()
+	flash.Success("You have logged out.")
 	http.Redirect(w, r, "/", http.StatusFound)
 }
