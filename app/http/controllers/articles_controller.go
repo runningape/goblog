@@ -3,10 +3,9 @@ package controllers
 import (
 	"fmt"
 	"net/http"
-	"strconv"
-	"unicode/utf8"
 
 	"github.com/runningape/goblog/app/models/article"
+	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/view"
@@ -62,40 +61,18 @@ func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
 	view.Render(w, view.D{}, "articles.create", "articles._form_field")
 }
 
-func validateArticleFormData(title, body string) map[string]string {
-	errors := make(map[string]string)
-
-	if title == "" {
-		errors["title"] = "The title length cannot be empty."
-	} else if utf8.RuneCountInString(title) < 3 || utf8.RuneCountInString(title) > 40 {
-		errors["title"] = "The title length must be between 3 and 40 characters."
-	}
-
-	if body == "" {
-		errors["body"] = "The content length cannot be empty."
-	} else if utf8.RuneCountInString(body) < 10 {
-		errors["body"] = "The content length must be less than 10 characters."
-	}
-
-	return errors
-
-}
-
 func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 
-	title := r.PostFormValue("title")
-	body := r.PostFormValue("body")
-
-	errors := validateArticleFormData(title, body)
-
+	_article := article.Article{
+		Title: r.PostFormValue("title"),
+		Body:  r.PostFormValue("body"),
+	}
+	errors := requests.ValidateArticleForm(_article)
 	if len(errors) == 0 {
-		_article := article.Article{
-			Title: title,
-			Body:  body,
-		}
 		_article.Create()
 		if _article.ID > 0 {
-			fmt.Fprint(w, "Insert successful. ID:"+strconv.FormatUint(_article.ID, 10))
+			indexURL := route.Name2URL("articles.show", "id", _article.GetStringID())
+			http.Redirect(w, r, indexURL, http.StatusFound)
 		} else {
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "Failed to create the article, please contact the administrator!")
@@ -103,9 +80,8 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 
 	} else {
 		view.Render(w, view.D{
-			"Title":  title,
-			"Body":   body,
-			"Errors": errors,
+			"Article": _article,
+			"Errors":  errors,
 		}, "articles.create", "articles._form_field")
 	}
 }
@@ -126,10 +102,8 @@ func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		view.Render(w, view.D{
-			"Title":   _article.Title,
-			"Body":    _article.Body,
 			"Article": _article,
-			"Errors":  nil,
+			"Errors":  view.D{},
 		}, "articles.edit", "articles._form_field")
 	}
 }
@@ -149,24 +123,23 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		title := r.PostFormValue("title")
-		body := r.PostFormValue("body")
+		_article.Title = r.PostFormValue("title")
+		_article.Body = r.PostFormValue("body")
 
-		errors := validateArticleFormData(title, body)
+		errors := requests.ValidateArticleForm(_article)
 
 		if len(errors) == 0 {
-			_article.Title = title
-			_article.Body = body
 			rowsAffected, err := _article.Update()
 
 			if err != nil {
 				logger.LogError(err)
 				w.WriteHeader(http.StatusInternalServerError)
 				fmt.Fprint(w, "500 Internal Server Error")
+				return
 			}
 
 			if rowsAffected > 0 {
-				showURL := route.Name2URL("articles.index")
+				showURL := route.Name2URL("articles.show", "id", id)
 				http.Redirect(w, r, showURL, http.StatusFound)
 			} else {
 				fmt.Fprint(w, "You haven't made any changes.")
@@ -174,8 +147,6 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 
 		} else {
 			view.Render(w, view.D{
-				"Title":   title,
-				"Body":    body,
 				"Article": _article,
 				"Errors":  errors,
 			}, "articles.edit", "articles._form_field")
