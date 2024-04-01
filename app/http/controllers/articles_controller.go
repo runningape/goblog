@@ -7,6 +7,7 @@ import (
 	"github.com/runningape/goblog/app/models/article"
 	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/logger"
+	"github.com/runningape/goblog/pkg/auth"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/view"
 	"gorm.io/gorm"
@@ -39,7 +40,7 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 	} else {
 		view.Render(w, view.D{
 			"Article": article,
-		}, "articles.show")
+		}, "articles.show", "articles._article_meta")
 	}
 }
 
@@ -53,7 +54,7 @@ func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 	} else {
 		view.Render(w, view.D{
 			"Articles": articles,
-		}, "articles.index")
+		}, "articles.index", "articles._article_meta")
 	}
 }
 
@@ -64,8 +65,9 @@ func (*ArticlesController) Create(w http.ResponseWriter, r *http.Request) {
 func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 
 	_article := article.Article{
-		Title: r.PostFormValue("title"),
-		Body:  r.PostFormValue("body"),
+		Title:  r.PostFormValue("title"),
+		Body:   r.PostFormValue("body"),
+		UserID: auth.User().ID,
 	}
 	errors := requests.ValidateArticleForm(_article)
 	if len(errors) == 0 {
@@ -74,6 +76,7 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 			indexURL := route.Name2URL("articles.show", "id", _article.GetStringID())
 			http.Redirect(w, r, indexURL, http.StatusFound)
 		} else {
+
 			w.WriteHeader(http.StatusInternalServerError)
 			fmt.Fprint(w, "Failed to create the article, please contact the administrator!")
 		}
