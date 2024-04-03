@@ -5,9 +5,11 @@ import (
 	"net/http"
 
 	"github.com/runningape/goblog/app/models/article"
+	"github.com/runningape/goblog/app/policies"
 	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/auth"
+	"github.com/runningape/goblog/pkg/flash"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/view"
 	"gorm.io/gorm"
@@ -39,7 +41,8 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		view.Render(w, view.D{
-			"Article": article,
+			"Article":          article,
+			"CanModifyArticle": policies.CanModifyArticle(article),
 		}, "articles.show", "articles._article_meta")
 	}
 }
@@ -104,10 +107,17 @@ func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		view.Render(w, view.D{
-			"Article": _article,
-			"Errors":  view.D{},
-		}, "articles.edit", "articles._form_field")
+
+		if !policies.CanModifyArticle(_article) {
+			flash.Warning("未授权操作！")
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+
+			view.Render(w, view.D{
+				"Article": _article,
+				"Errors":  view.D{},
+			}, "articles.edit", "articles._form_field")
+		}
 	}
 }
 
@@ -126,33 +136,39 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		_article.Title = r.PostFormValue("title")
-		_article.Body = r.PostFormValue("body")
 
-		errors := requests.ValidateArticleForm(_article)
-
-		if len(errors) == 0 {
-			rowsAffected, err := _article.Update()
-
-			if err != nil {
-				logger.LogError(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				fmt.Fprint(w, "500 Internal Server Error")
-				return
-			}
-
-			if rowsAffected > 0 {
-				showURL := route.Name2URL("articles.show", "id", id)
-				http.Redirect(w, r, showURL, http.StatusFound)
-			} else {
-				fmt.Fprint(w, "You haven't made any changes.")
-			}
-
+		if !policies.CanModifyArticle(_article) {
+			flash.Warning("未授权操作！")
+			http.Redirect(w, r, "/", http.StatusForbidden)
 		} else {
-			view.Render(w, view.D{
-				"Article": _article,
-				"Errors":  errors,
-			}, "articles.edit", "articles._form_field")
+
+			_article.Title = r.PostFormValue("title")
+			_article.Body = r.PostFormValue("body")
+
+			errors := requests.ValidateArticleForm(_article)
+
+			if len(errors) == 0 {
+				rowsAffected, err := _article.Update()
+
+				if err != nil {
+					logger.LogError(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					fmt.Fprint(w, "500 Internal Server Error")
+					return
+				}
+
+				if rowsAffected > 0 {
+					showURL := route.Name2URL("articles.show", "id", id)
+					http.Redirect(w, r, showURL, http.StatusFound)
+				} else {
+					fmt.Fprint(w, "You haven't made any changes.")
+				}
+			} else {
+				view.Render(w, view.D{
+					"Article": _article,
+					"Errors":  errors,
+				}, "articles.edit", "articles._form_field")
+			}
 		}
 	}
 }
@@ -172,19 +188,25 @@ func (*ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, "500 Internal Server Error")
 		}
 	} else {
-		rowsAffected, err := _article.Delete()
-
-		if err != nil {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
+		if !policies.CanModifyArticle(_article) {
+			flash.Warning("您没有权限执行此操作！")
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
-			if rowsAffected > 0 {
-				indexURL := route.Name2URL("articles.index")
-				http.Redirect(w, r, indexURL, http.StatusFound)
+
+			rowsAffected, err := _article.Delete()
+
+			if err != nil {
+				logger.LogError(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				fmt.Fprint(w, "500 Internal Server Error")
 			} else {
-				w.WriteHeader(http.StatusNotFound)
-				fmt.Fprint(w, "404 article not found")
+				if rowsAffected > 0 {
+					indexURL := route.Name2URL("articles.index")
+					http.Redirect(w, r, indexURL, http.StatusFound)
+				} else {
+					w.WriteHeader(http.StatusNotFound)
+					fmt.Fprint(w, "404 article not found")
+				}
 			}
 		}
 	}
