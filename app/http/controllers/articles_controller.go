@@ -9,36 +9,22 @@ import (
 	"github.com/runningape/goblog/app/requests"
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/auth"
-	"github.com/runningape/goblog/pkg/flash"
 	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/view"
-	"gorm.io/gorm"
 )
 
 type ArticlesController struct {
+	BaseController
 }
 
-// type ArticlesFormData struct {
-// 	Title, Body string
-// 	Article     article.Article
-// 	Errors      map[string]string
-// }
-
-func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
+func (ac *ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 
 	id := route.GetRouteVariable("id", r)
 
 	article, err := article.Get(id)
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
+		ac.ResponseForSQLError(w, err)
 	} else {
 		view.Render(w, view.D{
 			"Article":          article,
@@ -47,13 +33,11 @@ func (*ArticlesController) Show(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (*ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
+func (ac *ArticlesController) Index(w http.ResponseWriter, r *http.Request) {
 	articles, err := article.GetAll()
 
 	if err != nil {
-		logger.LogError(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprint(w, "500 Internal Server Error")
+		ac.ResponseForSQLError(w, err)
 	} else {
 		view.Render(w, view.D{
 			"Articles": articles,
@@ -92,25 +76,17 @@ func (*ArticlesController) Store(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
+func (ac *ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 
 	id := route.GetRouteVariable("id", r)
 	_article, err := article.Get(id)
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
+		ac.ResponseForSQLError(w, err)
 	} else {
 
 		if !policies.CanModifyArticle(_article) {
-			flash.Warning("未授权操作！")
-			http.Redirect(w, r, "/", http.StatusFound)
+			ac.ResponseForUnauthorized(w, r)
 		} else {
 
 			view.Render(w, view.D{
@@ -121,25 +97,17 @@ func (*ArticlesController) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
+func (ac *ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 
 	id := route.GetRouteVariable("id", r)
 	_article, err := article.Get(id)
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
+		ac.ResponseForSQLError(w, err)
 	} else {
 
 		if !policies.CanModifyArticle(_article) {
-			flash.Warning("未授权操作！")
-			http.Redirect(w, r, "/", http.StatusForbidden)
+			ac.ResponseForUnauthorized(w, r)
 		} else {
 
 			_article.Title = r.PostFormValue("title")
@@ -173,24 +141,16 @@ func (*ArticlesController) Update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (*ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
+func (ac *ArticlesController) Delete(w http.ResponseWriter, r *http.Request) {
 
 	id := route.GetRouteVariable("id", r)
 	_article, err := article.Get(id)
 
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "404 Article not found")
-		} else {
-			logger.LogError(err)
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprint(w, "500 Internal Server Error")
-		}
+		ac.ResponseForSQLError(w, err)
 	} else {
 		if !policies.CanModifyArticle(_article) {
-			flash.Warning("您没有权限执行此操作！")
-			http.Redirect(w, r, "/", http.StatusFound)
+			ac.ResponseForUnauthorized(w, r)
 		} else {
 
 			rowsAffected, err := _article.Delete()
