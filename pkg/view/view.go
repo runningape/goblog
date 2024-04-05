@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/runningape/goblog/app/models/user"
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/auth"
 	"github.com/runningape/goblog/pkg/flash"
@@ -26,6 +27,7 @@ func RenderTemplate(w io.Writer, name string, data D, tplFiles ...string) {
 	data["isLogined"] = auth.Check()
 	data["loginUser"] = auth.User
 	data["flash"] = flash.All()
+	data["Users"], _ = user.All()
 
 	allFiles := getTemplateFiles(tplFiles...)
 
