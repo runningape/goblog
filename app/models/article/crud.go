@@ -1,8 +1,12 @@
 package article
 
 import (
+	"net/http"
+
 	"github.com/runningape/goblog/logger"
 	"github.com/runningape/goblog/pkg/model"
+	"github.com/runningape/goblog/pkg/pagination"
+	"github.com/runningape/goblog/pkg/route"
 	"github.com/runningape/goblog/pkg/types"
 )
 
@@ -18,12 +22,15 @@ func Get(idstr string) (Article, error) {
 }
 
 // GetAll 获取全部文章
-func GetAll() ([]Article, error) {
+func GetAll(r *http.Request, perPage int) ([]Article, pagination.ViewData, error) {
+	db := model.DB.Model(Article{}).Order("created_at desc")
+	_pager := pagination.New(r, db, route.Name2URL("home"), perPage)
+	viewData := _pager.Paging()
+
 	var articles []Article
-	if err := model.DB.Debug().Preload("User").Find(&articles).Error; err != nil {
-		return articles, err
-	}
-	return articles, nil
+	_pager.Results(&articles)
+
+	return articles, viewData, nil
 }
 
 func (article *Article) Create() (err error) {
